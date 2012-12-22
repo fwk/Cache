@@ -1,10 +1,10 @@
 <?php
 namespace Fwk\Cache\Adapters;
 
-use Fwk\Cache\AbstractAdapter;
+use Fwk\Cache\Adapter;
 use Fwk\Cache\Exceptions\AdapterError;
 
-class Filesystem extends AbstractAdapter
+class Filesystem implements Adapter
 {
     /**
      * @var string 
