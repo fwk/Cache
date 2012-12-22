@@ -8,7 +8,7 @@ interface Adapter
     
     public function exists($key);
     
-    public function write($key, $contents);
+    public function write($key, $maxAge, $contents);
     
     public function delete($key);
 }

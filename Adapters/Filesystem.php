@@ -39,7 +39,7 @@ class Filesystem extends AbstractAdapter
      * 
      * @return int
      */
-    public function write($key, $contents)
+    public function write($key, $write, $contents)
     {
         $file = implode(DIRECTORY_SEPARATOR, array(
             $this->cacheDirectory,

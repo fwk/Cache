@@ -77,6 +77,10 @@ class Manager
         if ($this->has($key, $maxAge)) {
             $entry = $this->serializer->unserialize($this->adapter->read($key));
             
+            if (!$entry instanceof CacheEntry) {
+                throw new Exceptions\ReadError();
+            }
+            
             return $entry;
         }
         
@@ -104,6 +108,10 @@ class Manager
         }
         
         $entry = $this->serializer->unserialize($this->adapter->read($key));
+        if (!$entry instanceof CacheEntry) {
+            return false;
+        }
+        
         if ($maxAge !== null) {
             $entry->setMaxAge($maxAge);
         }
@@ -124,7 +132,11 @@ class Manager
         $entry = new CacheEntry($item, $key);
         $entry->setMaxAge($maxAge);
         
-        $this->adapter->write($key, $this->serializer->serialize($entry));
+        $this->adapter->write(
+            $key, 
+            $entry->getMaxAge(), 
+            $this->serializer->serialize($entry)
+        );
         
         return $entry;
     }
