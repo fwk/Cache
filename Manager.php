@@ -188,6 +188,24 @@ class Manager
      */
     public function hitRatio()
     {
-        return round($this->cacheHits*100/$this->hits);
+        return round($this->cacheHits*100/$this->hits, 2);
+    }
+    
+    /**
+     *
+     * @return integer 
+     */
+    public function getHits()
+    {
+        return $this->hits;
+    }
+
+    /**
+     *
+     * @return integer 
+     */
+    public function getCacheHits()
+    {
+        return $this->cacheHits;
     }
 }
