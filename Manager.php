@@ -1,7 +1,6 @@
 <?php
 namespace Fwk\Cache;
 
-
 use Fwk\Cache\Serializers\Native;
 
 class Manager
@@ -15,6 +14,16 @@ class Manager
      * @var Serializer
      */
     protected $serializer;
+    
+    /**
+     * @var integer 
+     */
+    protected $hits = 0;
+    
+    /**
+     * @var integer 
+     */
+    protected $cacheHits = 0;
     
     /**
      *
@@ -74,12 +83,16 @@ class Manager
      */
     public function get($key, $maxAge = null, \Closure $save = null)
     {
+        $this->hits++;
+        
         if ($this->has($key, $maxAge)) {
             $entry = $this->serializer->unserialize($this->adapter->read($key));
             
             if (!$entry instanceof CacheEntry) {
                 throw new Exceptions\ReadError();
             }
+            
+            $this->cacheHits++;
             
             return $entry;
         }
@@ -132,13 +145,37 @@ class Manager
         $entry = new CacheEntry($item, $key);
         $entry->setMaxAge($maxAge);
         
-        $this->adapter->write(
+        $res = $this->adapter->write(
             $key, 
             $entry->getMaxAge(), 
             $this->serializer->serialize($entry)
         );
         
+        if (!$res) {
+            throw new Exceptions\WriteError();
+        }
+        
         return $entry;
+    }
+    
+    /**
+     *
+     * @param string $key key name or CacheEntry
+     * 
+     * @return Manager 
+     */
+    public function erase($keyOrEntry)
+    {
+        if ($key instanceof CacheEntry) {
+            $key = $key->getKey();
+        }
+        
+        $res = $this->adapter->delete($key);
+        if (!$res) {
+            throw new Exceptions\WriteError();
+        }
+        
+        return $this;
     }
     
     public function flush()
@@ -147,11 +184,10 @@ class Manager
     
     /**
      *
-     * @param string $wildcard 
-     * 
-     * @return array
+     * @return float
      */
-    public function find($wildcard)
+    public function hitRatio()
     {
+        return round($this->cacheHits*100/$this->hits);
     }
 }
