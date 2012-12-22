@@ -2,6 +2,8 @@
 namespace Fwk\Cache;
 
 
+use Fwk\Cache\Serializers\Native;
+
 class Manager
 {
     /**
@@ -10,14 +12,24 @@ class Manager
     protected $adapter;
     
     /**
+     * @var Serializer
+     */
+    protected $serializer;
+    
+    /**
      *
-     * @param Adapter $adapter Cache adapter to use for this instance
+     * @param Adapter $adapter Cache adapter to use with this instance
      * 
      * @return void
      */
-    public function __construct(Adapter $adapter)
+    public function __construct(Adapter $adapter, Serializer $serializer = null)
     {
-        $this->adapter = $adapter;
+        if (null === $serializer) {
+            $serializer = new Native();
+        }
+        
+        $this->adapter      = $adapter;
+        $this->serializer   = $serializer;
     }
     
     /**
@@ -30,6 +42,28 @@ class Manager
     }
     
     /**
+     *
+     * @return Serializer
+     */
+    public function getSerializer()
+    {
+        return $this->serializer;
+    }
+    
+    /**
+     *
+     * @param Serializer $serializer 
+     * 
+     * @return Manager
+     */
+    public function setSerializer(Serializer $serializer)
+    {
+        $this->serializer   = $serializer;
+        
+        return $this;
+    }
+
+    /**
      * Fetch a cache entry
      * 
      * @param string   $key    Cache key
@@ -40,14 +74,59 @@ class Manager
      */
     public function get($key, $maxAge = null, \Closure $save = null)
     {
+        if ($this->has($key, $maxAge)) {
+            $entry = $this->serializer->unserialize($this->adapter->read($key));
+            
+            return $entry;
+        }
+        
+        if (is_callable($save)) {
+            $item = call_user_func($save);
+            if ($item !== null) {
+                return $this->put($key, $item, $maxAge);
+            }
+        }
+        
+        return null;
     }
     
+    /**
+     *
+     * @param string    $key
+     * @param mixed     $maxAge 
+     * 
+     * @return boolean
+     */
     public function has($key, $maxAge = null)
     {
+        if (!$this->adapter->exists($key)) {
+            return false;
+        }
+        
+        $entry = $this->serializer->unserialize($this->adapter->read($key));
+        if ($maxAge !== null) {
+            $entry->setMaxAge($maxAge);
+        }
+        
+        return !$entry->isExpired();
     }
     
+    /**
+     *
+     * @param string $key
+     * @param mixed  $item
+     * @param mixed  $maxAge 
+     * 
+     * @return CacheEntry
+     */
     public function put($key, $item, $maxAge = null)
     {
+        $entry = new CacheEntry($item, $key);
+        $entry->setMaxAge($maxAge);
+        
+        $this->adapter->write($key, $this->serializer->serialize($entry));
+        
+        return $entry;
     }
     
     public function flush()

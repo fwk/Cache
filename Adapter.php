@@ -4,5 +4,11 @@ namespace Fwk\Cache;
 
 interface Adapter
 {
+    public function read($key);
     
+    public function exists($key);
+    
+    public function write($key, $contents);
+    
+    public function delete($key);
 }
