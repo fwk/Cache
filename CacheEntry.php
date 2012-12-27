@@ -40,7 +40,7 @@ class CacheEntry
             return false;
         } elseif ($this->maxAge instanceof SuperClosure) {
             $closure = $this->maxAge->getClosure();
-            return $closure();
+            return (bool)$closure();
         }
         
         $ts = $this->createdOn + $this->maxAge;
