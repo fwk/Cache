@@ -12,6 +12,11 @@ class Filesystem implements Adapter
     protected $cacheDirectory;
     
     /**
+     * @var Serializer 
+     */
+    protected $serializer;
+    
+    /**
      *
      * @param string $cacheDirectory Target directory for cache files
      * 
@@ -39,14 +44,25 @@ class Filesystem implements Adapter
      * 
      * @return int
      */
-    public function write($key, $write, $contents)
+    public function write(\Fwk\Cache\CacheEntry $entry)
     {
-        $file = implode(DIRECTORY_SEPARATOR, array(
+        $fileInfos = implode(DIRECTORY_SEPARATOR, array(
             $this->cacheDirectory,
-            md5('cacheKey:'. $key)
+            md5('cacheKey:'. $entry->getKey()) . '.cache'
         ));
         
-        return file_put_contents($file, $contents);
+        $fileContents = implode(DIRECTORY_SEPARATOR, array(
+            $this->cacheDirectory,
+            md5('cacheKey:'. $entry->getKey())
+        ));
+        
+        $entry->setSerializer($this->serializer);
+        $serialized = $entry->getSerializedContents();
+        
+        file_put_contents($fileInfos, $this->serializer->serialize($entry));
+        file_put_contents($fileContents, $serialized);
+        
+        return true;
     }
     
     /**
@@ -59,10 +75,39 @@ class Filesystem implements Adapter
     {
         $file = implode(DIRECTORY_SEPARATOR, array(
             $this->cacheDirectory,
-            md5('cacheKey:'. $key)
+            md5('cacheKey:'. $key) .'.cache'
         ));
         
         return is_file($file);
+    }
+    
+    /**
+     *
+     * @param string $fileName
+     * 
+     * @return CacheEntry 
+     */
+    public function readEntry($key)
+    {
+        if (!$this->exists($key)) {
+            return false;
+        }
+        
+        $fileInfos = implode(DIRECTORY_SEPARATOR, array(
+            $this->cacheDirectory,
+            md5('cacheKey:'. $key) . '.cache'
+        ));
+        
+        $contents = file_get_contents($fileInfos);
+        $entry = $this->serializer->unserialize($contents);
+        
+        if (!$entry instanceof \Fwk\Cache\CacheEntry) {
+            throw new \Fwk\Cache\Exceptions\ReadError("contents is not a valid CacheEntry");
+        }
+        
+        $entry->setSerializer($this->serializer);
+        
+        return $entry;
     }
     
     /**
@@ -73,16 +118,16 @@ class Filesystem implements Adapter
      */
     public function read($key)
     {
-        $file = implode(DIRECTORY_SEPARATOR, array(
+        if (!$this->exists($key)) {
+            return false;
+        }
+        
+        $fileContents = implode(DIRECTORY_SEPARATOR, array(
             $this->cacheDirectory,
             md5('cacheKey:'. $key)
         ));
         
-        if (!is_file($file)) {
-            return false;
-        }
-        
-        return file_get_contents($file);
+        return file_get_contents($fileContents);
     }
     
     /**
@@ -93,15 +138,38 @@ class Filesystem implements Adapter
      */
     public function delete($key)
     {
-        $file = implode(DIRECTORY_SEPARATOR, array(
+        if (!$this->exists($key)) {
+            return true;
+        }
+        
+        $fileInfos = implode(DIRECTORY_SEPARATOR, array(
+            $this->cacheDirectory,
+            md5('cacheKey:'. $key) . '.cache'
+        ));
+        
+        $fileContents = implode(DIRECTORY_SEPARATOR, array(
             $this->cacheDirectory,
             md5('cacheKey:'. $key)
         ));
         
-        if (!is_file($file)) {
-            return true;
-        }
+        $ret = (int)unlink($fileInfos) + (int)unlink($fileContents);
         
-        return unlink($file);
+        return $ret == 2;
+    }
+    
+    /**
+     *
+     * @return \Fwk\Cache\Serializer
+     */
+    public function getSerializer()
+    {
+        return $this->serializer;
+    }
+
+    public function setSerializer(\Fwk\Cache\Serializer $serializer)
+    {
+        $this->serializer = $serializer;
+        
+        return $this;
     }
 }

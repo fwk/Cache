@@ -11,11 +11,6 @@ class Manager
     protected $adapter;
     
     /**
-     * @var Serializer
-     */
-    protected $serializer;
-    
-    /**
      * @var integer 
      */
     protected $hits = 0;
@@ -38,7 +33,7 @@ class Manager
         }
         
         $this->adapter      = $adapter;
-        $this->serializer   = $serializer;
+        $adapter->setSerializer($serializer);
     }
     
     /**
@@ -50,28 +45,6 @@ class Manager
         return $this->adapter;
     }
     
-    /**
-     *
-     * @return Serializer
-     */
-    public function getSerializer()
-    {
-        return $this->serializer;
-    }
-    
-    /**
-     *
-     * @param Serializer $serializer 
-     * 
-     * @return Manager
-     */
-    public function setSerializer(Serializer $serializer)
-    {
-        $this->serializer   = $serializer;
-        
-        return $this;
-    }
-
     /**
      * Fetch a cache entry
      * 
@@ -85,12 +58,13 @@ class Manager
     {
         $this->hits++;
         
-        if ($this->has($key, $maxAge)) {
-            $entry = $this->serializer->unserialize($this->adapter->read($key));
-            
+        if ($this->has($key, ($maxAge instanceof \Closure ? null : $maxAge))) {
+            $entry = $this->adapter->readEntry($key);
             if (!$entry instanceof CacheEntry) {
                 throw new Exceptions\ReadError();
             }
+
+            $entry->setSerializedContents($this->adapter->read($key));
             
             $this->cacheHits++;
             
@@ -116,11 +90,7 @@ class Manager
      */
     public function has($key, $maxAge = null)
     {
-        if (!$this->adapter->exists($key)) {
-            return false;
-        }
-        
-        $entry = $this->serializer->unserialize($this->adapter->read($key));
+        $entry = $this->adapter->readEntry($key);
         if (!$entry instanceof CacheEntry) {
             return false;
         }
@@ -140,16 +110,13 @@ class Manager
      * 
      * @return CacheEntry
      */
-    public function put($key, $item, $maxAge = null)
+    public function put($key, $item, $maxAge = null, array $tags = array())
     {
         $entry = new CacheEntry($item, $key);
         $entry->setMaxAge($maxAge);
+        $entry->setTags($tags);
         
-        $res = $this->adapter->write(
-            $key, 
-            $entry->getMaxAge(), 
-            $this->serializer->serialize($entry)
-        );
+        $res = $this->adapter->write($entry);
         
         if (!$res) {
             throw new Exceptions\WriteError();
