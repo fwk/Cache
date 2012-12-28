@@ -85,13 +85,6 @@ class Database implements Adapter
             $maxAge = $this->serializer->serialize($maxAge);
         }
         
-        $data = array(
-            'key'           => $entry->getKey(),
-            'created_on'    => $entry->getCreatedOn(),
-            'max_age'       => $maxAge,
-            'tags'          => implode(self::TAGS_SEPARATOR, $entry->getTags())
-        );
-        
         $query = "INSERT INTO %s VALUES (%s,%s,%s,%s)";
         $stmt = $this->pdo->exec(
             sprintf(
@@ -105,11 +98,6 @@ class Database implements Adapter
         );
         
         $entry->setSerializer($this->serializer);
-        $data2 = array(
-            'key'       => $entry->getKey(),
-            'contents'  => $entry->getSerializedContents()
-        );
-        
         $query = "INSERT INTO %s VALUES (%s, %s)";
         $stmt = $this->pdo->exec(
             sprintf(
