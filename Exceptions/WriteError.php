@@ -22,12 +22,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * PHP Version 5.3
- * 
- * @category   Core
+ *
+ * @category   Cache
  * @package    Fwk\Cache
  * @subpackage Exceptions
  * @author     Julien Ballestracci <julien@nitronet.org>
- * @copyright  2011-2012 Julien Ballestracci <julien@nitronet.org>
+ * @copyright  2013-2014 Julien Ballestracci <julien@nitronet.org>
  * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
  * @link       http://www.phpfwk.com
  */
